@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DataTalk — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#07070c;--surface:#0f0f18;--surface2:#16161f;--accent:#00e5a0;--text:#eeeef5;--muted:#6b6b88;--border:rgba(255,255,255,0.06);}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+nav{padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0;}
+.logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;}.logo span{color:var(--accent);}
+.file-info{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);}
+.dot.on{background:var(--accent);box-shadow:0 0 6px var(--accent);}
+.main{display:flex;flex:1;overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{width:260px;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);flex-shrink:0;padding:20px;}
+.sidebar h3{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.upload-zone{border:1.5px dashed rgba(0,229,160,.25);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(0,229,160,.02);margin-bottom:16px;}
+.upload-zone:hover{border-color:var(--accent);background:rgba(0,229,160,.05);}
+.upload-zone.done{border-color:var(--accent);border-style:solid;}
+.upload-icon{font-size:24px;margin-bottom:8px;}
+.upload-zone p{font-size:13px;color:var(--muted);}
+.upload-zone strong{color:var(--accent);}
+#fileInput{display:none;}
+.file-badge{background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.2);border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:16px;display:none;}
+.file-badge .fname{color:var(--accent);font-weight:600;word-break:break-all;}
+.file-badge .fmeta{color:var(--muted);margin-top:3px;}
+.divider{height:1px;background:var(--border);margin:16px 0;}
+.history-title{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.history-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;}
+.history-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;color:var(--muted);cursor:pointer;transition:all .2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.history-item:hover{color:var(--text);border-color:rgba(0,229,160,.2);}
+
+/* CHAT AREA */
+.chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.messages{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:16px;}
+.msg{display:flex;gap:12px;animation:fadeUp .3s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.av{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.av.u{background:#7b61ff;}
+.av.a{background:rgba(0,229,160,.12);border:1px solid rgba(0,229,160,.2);}
+.bubble{max-width:680px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;font-size:14px;line-height:1.7;}
+.bubble.a{border-color:rgba(0,229,160,.12);}
+.bubble.loading{color:var(--muted);}
+.chart-wrap{margin-top:14px;background:var(--surface2);border-radius:10px;padding:16px;max-width:500px;}
+
+/* INPUT */
+.input-area{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;background:var(--surface);}
+.input-wrap{flex:1;display:flex;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:0 16px;transition:border-color .2s;}
+.input-wrap:focus-within{border-color:rgba(0,229,160,.3);}
+#questionInput{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:14px;padding:14px 0;font-family:'DM Sans',sans-serif;}
+#questionInput::placeholder{color:var(--muted);}
+#questionInput:disabled{opacity:.5;}
+.send-btn{background:var(--accent);color:#000;border:none;border-radius:10px;padding:14px 20px;font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;white-space:nowrap;}
+.send-btn:hover{opacity:.85;transform:translateY(-1px);}
+.send-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+
+/* WELCOME */
+.welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;}
+.welcome h2{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;margin-bottom:10px;}
+.welcome h2 span{color:var(--accent);}
+.welcome p{color:var(--muted);font-size:15px;max-width:400px;line-height:1.7;}
+.suggestions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:24px;}
+.sug{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 16px;font-size:13px;color:var(--muted);cursor:pointer;transition:all .2s;}
+.sug:hover{border-color:rgba(0,229,160,.3);color:var(--text);}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Data<span>Talk</span></div>
+  <div class="file-info">
+    <div class="dot" id="statusDot"></div>
+    <span id="statusText">No file loaded</span>
+  </div>
+</nav>
+
+<div class="main">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <h3>Your Data</h3>
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon">📂</div>
+      <p><strong>Click to upload</strong><br/>CSV or Excel file</p>
+    </div>
+    <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.tsv"/>
+
+    <div class="file-badge" id="fileBadge">
+      <div class="fname" id="fileName"></div>
+      <div class="fmeta" id="fileMeta"></div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="history-title">Recent Questions</div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="chat-area">
+    <div class="messages" id="messages">
+      <div class="welcome" id="welcome">
+        <h2>Ask Your Data <span>Anything</span></h2>
+        <p>Upload a CSV or Excel file, then ask questions in plain English. Get instant answers and charts.</p>
+        <div class="suggestions">
+          <div class="sug" onclick="useSuggestion(this)">What are the top 5 values?</div>
+          <div class="sug" onclick="useSuggestion(this)">Show me a summary</div>
+          <div class="sug" onclick="useSuggestion(this)">What trends do you see?</div>
+          <div class="sug" onclick="useSuggestion(this)">Which column has most nulls?</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-wrap">
+        <input type="text" id="questionInput" placeholder="Upload a file first, then ask anything..." disabled/>
+      </div>
+      <button class="send-btn" id="sendBtn" onclick="sendQuestion()" disabled>Ask →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────
+const API = 'http://127.0.0.1:8000';  // Change to Railway URL after deploy
+let sessionId = null;
+let chartInstances = {};
+
+// ── FILE UPLOAD ──────────────────────────
+const fileInput = document.getElementById('fileInput');
+const uploadZone = document.getElementById('uploadZone');
+
+// Drag & Drop
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) uploadFile(file);
+});
+
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) uploadFile(e.target.files[0]);
+});
+
+async function uploadFile(file) {
+  uploadZone.innerHTML = '<div class="upload-icon">⏳</div><p>Uploading...</p>';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res = await fetch(`${API}/upload`, { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.detail || 'Upload failed');
+
+    sessionId = data.session_id;
+
+    // Update UI
+    uploadZone.classList.add('done');
+    uploadZone.innerHTML = '<div class="upload-icon">✅</div><p><strong>File loaded!</strong><br/>Click to change</p>';
+
+    document.getElementById('fileBadge').style.display = 'block';
+    document.getElementById('fileName').textContent = data.filename;
+    document.getElementById('fileMeta').textContent = `${data.rows.toLocaleString()} rows · ${data.columns.length} columns`;
+
+    document.getElementById('statusDot').className = 'dot on';
+    document.getElementById('statusText').textContent = `${data.filename} · ${data.rows.toLocaleString()} rows`;
+
+    document.getElementById('questionInput').disabled = false;
+    document.getElementById('questionInput').placeholder = 'Ask anything about your data...';
+    document.getElementById('sendBtn').disabled = false;
+
+    // Welcome message from AI
+    hideWelcome();
+    addMessage('ai', `✅ **${data.filename}** loaded! I can see **${data.rows.toLocaleString()} rows** and **${data.columns.length} columns**: ${data.columns.slice(0,6).join(', ')}${data.columns.length > 6 ? '...' : ''}. Ask me anything!`);
+
+  } catch (err) {
+    uploadZone.innerHTML = '<div class="upload-icon">❌</div><p>Upload failed. Try again.</p>';
+    uploadZone.classList.remove('done');
+    alert('Upload error: ' + err.message);
+  }
+}
+
+// ── SEND QUESTION ────────────────────────
+document.getElementById('questionInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendQuestion(); }
+});
+
+async function sendQuestion() {
+  const input = document.getElementById('questionInput');
+  const question = input.value.trim();
+  if (!question || !sessionId) return;
+
+  input.value = '';
+  document.getElementById('sendBtn').disabled = true;
+  input.disabled = true;
+
+  hideWelcome();
+  addMessage('user', question);
+  addToHistory(question);
+
+  const loadingId = addMessage('ai', '...', true);
+
+  try {
+    const res = await fetch(`${API}/ask`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, question })
+    });
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.detail || 'Error');
+
+    removeMessage(loadingId);
+    addMessage('ai', data.answer, false, data.chart_data, data.chart_type);
+
+  } catch (err) {
+    removeMessage(loadingId);
+    addMessage('ai', '❌ Error: ' + err.message);
+  }
+
+  document.getElementById('sendBtn').disabled = false;
+  input.disabled = false;
+  input.focus();
+}
+
+// ── UI HELPERS ───────────────────────────
+function hideWelcome() {
+  const w = document.getElementById('welcome');
+  if (w) w.remove();
+}
+
+let msgCounter = 0;
+function addMessage(role, text, isLoading = false, chartData = null, chartType = null) {
+  const id = 'msg-' + (++msgCounter);
+  const messages = document.getElementById('messages');
+
+  const msg = document.createElement('div');
+  msg.className = 'msg';
+  msg.id = id;
+
+  const av = document.createElement('div');
+  av.className = `av ${role}`;
+  av.textContent = role === 'user' ? '👤' : '🤖';
+
+  const bubble = document.createElement('div');
+  bubble.className = `bubble ${role}${isLoading ? ' loading' : ''}`;
+
+  // Bold markdown support
+  bubble.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>');
+
+  // Chart
+  if (chartData && chartData.labels && chartData.values) {
+    const chartWrap = document.createElement('div');
+    chartWrap.className = 'chart-wrap';
+    const canvas = document.createElement('canvas');
+    canvas.id = 'chart-' + id;
+    canvas.height = 200;
+    chartWrap.appendChild(canvas);
+    bubble.appendChild(chartWrap);
+
+    setTimeout(() => renderChart(canvas.id, chartData, chartType || 'bar'), 100);
+  }
+
+  msg.appendChild(av);
+  msg.appendChild(bubble);
+  messages.appendChild(msg);
+  messages.scrollTop = messages.scrollHeight;
+
+  return id;
+}
+
+function removeMessage(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function renderChart(canvasId, chartData, chartType) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+
+  const colors = chartData.labels.map((_, i) => {
+    const hues = [160, 200, 260, 320, 40, 80];
+    return `hsla(${hues[i % hues.length]}, 80%, 60%, 0.8)`;
+  });
+
+  new Chart(ctx, {
+    type: chartType === 'pie' ? 'pie' : chartType === 'line' ? 'line' : 'bar',
+    data: {
+      labels: chartData.labels,
+      datasets: [{
+        label: chartData.title || 'Data',
+        data: chartData.values,
+        backgroundColor: colors,
+        borderColor: colors.map(c => c.replace('0.8', '1')),
+        borderWidth: 1,
+        borderRadius: chartType === 'bar' ? 4 : 0,
+        fill: chartType === 'line' ? false : undefined,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#eeeef5', font: { size: 12 } } },
+        title: { display: !!chartData.title, text: chartData.title, color: '#eeeef5' }
+      },
+      scales: chartType === 'pie' ? {} : {
+        x: { ticks: { color: '#6b6b88' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { ticks: { color: '#6b6b88' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+      }
+    }
+  });
+}
+
+function addToHistory(question) {
+  const list = document.getElementById('historyList');
+  const item = document.createElement('div');
+  item.className = 'history-item';
+  item.textContent = question;
+  item.onclick = () => {
+    document.getElementById('questionInput').value = question;
+    document.getElementById('questionInput').focus();
+  };
+  list.insertBefore(item, list.firstChild);
+  if (list.children.length > 10) list.removeChild(list.lastChild);
+}
+
+function useSuggestion(el) {
+  if (!sessionId) { alert('Please upload a file first!'); return; }
+  document.getElementById('questionInput').value = el.textContent;
+  sendQuestion();
+}
+</script>
+</body>
+</html>
